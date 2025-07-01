@@ -10,54 +10,51 @@ struct DMSingleMediaView: View {
     let media: UiMedia
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                if let previewUrl = viewModel.previewUrl {
-                    KFImage(previewUrl)
-                        .flareMediaPreview(size: CGSize(width: geometry.size.width * 2, height: geometry.size.height * 2))
-                        .placeholder {
-                            Rectangle()
-                                .foregroundColor(.gray.opacity(0.2))
-                        }
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                        .clipped()
-                } else {
-                    Rectangle()
-                        .foregroundColor(.gray.opacity(0.2))
-                }
-            }
-            .contentShape(Rectangle())
-            .overlay {
-                if viewModel.mediaKind == .video {
-                    Image(systemName: "play.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundColor(.white)
-                        .shadow(radius: 8)
-                }
-            }
-            .onTapGesture {
-                PhotoBrowserManager.shared.showPhotoBrowser(
-                    media: media,
-                    images: [media],
-                    initialIndex: 0,
-                    headers: media.customHeaders ?? [:]
-                )
-            }
-            .onAppear {
-                let modifier = AnyModifier { request in
-                    var r = request
-                    for (key, value) in media.customHeaders ?? [:] {
-                        r.setValue(value, forHTTPHeaderField: key)
+        ZStack {
+            if let previewUrl = viewModel.previewUrl {
+                KFImage(previewUrl)
+                    .flareMediaPreview(size: CGSize(width: 400, height: 400)) // 🟢 使用固定尺寸替代动态计算
+                    .placeholder {
+                        Rectangle()
+                            .foregroundColor(.gray.opacity(0.2))
                     }
-                    return r
-                }
-
-                KingfisherManager.shared.defaultOptions = [
-                    .requestModifier(modifier),
-                ]
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .clipped()
+            } else {
+                Rectangle()
+                    .foregroundColor(.gray.opacity(0.2))
             }
+        }
+        .contentShape(Rectangle())
+        .overlay {
+            if viewModel.mediaKind == .video {
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: 44))
+                    .foregroundColor(.white)
+                    .shadow(radius: 8)
+            }
+        }
+        .onTapGesture {
+            PhotoBrowserManager.shared.showPhotoBrowser(
+                media: media,
+                images: [media],
+                initialIndex: 0,
+                headers: media.customHeaders ?? [:]
+            )
+        }
+        .onAppear {
+            let modifier = AnyModifier { request in
+                var r = request
+                for (key, value) in media.customHeaders ?? [:] {
+                    r.setValue(value, forHTTPHeaderField: key)
+                }
+                return r
+            }
+
+            KingfisherManager.shared.defaultOptions = [
+                .requestModifier(modifier),
+            ]
         }
     }
 }

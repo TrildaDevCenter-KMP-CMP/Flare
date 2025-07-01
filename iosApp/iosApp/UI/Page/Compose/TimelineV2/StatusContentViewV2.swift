@@ -105,31 +105,67 @@ struct StatusMediaViewV2: View {
     let appSettings: AppSettings
     let onMediaClick: (Int, Media) -> Void  // 使用Swift Media类型
 
+    // 🟢 添加媒体渲染缓存机制
+    private static var mediaRenderCache: [String: AnyView] = [:]
+    private static var lastRenderTime: [String: Date] = [:]
+    private static let cacheTimeout: TimeInterval = 60.0 // 60秒缓存超时
+
+    // 🟢 生成缓存键
+    private var cacheKey: String {
+        let sensitiveState = item.sensitive ? (appSettings.appearanceSettings.showSensitiveContent ? "shown" : "hidden") : "normal"
+        let mediaHash = item.images.map { "\($0.url)_\($0.type)" }.joined(separator: "_")
+        return "\(item.id)_\(sensitiveState)_\(item.images.count)_\(mediaHash.hashValue)"
+    }
+
+    // 🟢 检查是否需要重新渲染
+    private var shouldRerender: Bool {
+        guard let lastTime = Self.lastRenderTime[cacheKey] else { return true }
+        return Date().timeIntervalSince(lastTime) > Self.cacheTimeout
+    }
+
     var body: some View {
-        // 添加详细日志
-        let _ = FlareLog.debug("StatusMediaViewV2 开始渲染媒体")
-        let _ = FlareLog.debug("StatusMediaViewV2 item.hasImages: \(item.hasImages)")
-        let _ = FlareLog.debug("StatusMediaViewV2 item.images.count: \(item.images.count)")
-        let _ = FlareLog.debug("StatusMediaViewV2 item.images: \(item.images)")
-        let _ = FlareLog.debug("StatusMediaViewV2 item.sensitive: \(item.sensitive)")
-        let _ = FlareLog.debug("StatusMediaViewV2 showSensitiveContent: \(appSettings.appearanceSettings.showSensitiveContent)")
+        // 🟢 优化：只在必要时输出日志
+        // if shouldRerender {
+        //     let _ = FlareLog.debug("StatusMediaViewV2 开始渲染媒体 - item.id: \(item.id)")
+        //     let _ = FlareLog.debug("StatusMediaViewV2 item.hasImages: \(item.hasImages)")
+        //     let _ = FlareLog.debug("StatusMediaViewV2 item.images.count: \(item.images.count)")
+        //     let _ = FlareLog.debug("StatusMediaViewV2 item.sensitive: \(item.sensitive)")
+        //     let _ = FlareLog.debug("StatusMediaViewV2 showSensitiveContent: \(appSettings.appearanceSettings.showSensitiveContent)")
+        // }
 
         Spacer().frame(height: 8)
 
-        // 使用V2版本的MediaComponent，传递正确的媒体数据
-        MediaComponentV2(
-            hideSensitive: item.sensitive && !appSettings.appearanceSettings.showSensitiveContent,
-            medias: item.images, // ✅ 修复：使用item.images而不是空数组
-            onMediaClick: { index, media in
-                FlareLog.debug("StatusMediaViewV2 媒体点击: index=\(index), media=\(media)")
-                PhotoBrowserManagerV2.shared.showPhotoBrowser(
-                    media: media,
-                    images: item.images, // ✅ 修复：使用item.images而不是空数组
-                    initialIndex: index
-                )
-            },
-            sensitive: item.sensitive
-        )
+        // 🟢 使用缓存机制避免重复渲染
+        // if let cachedView = Self.mediaRenderCache[cacheKey], !shouldRerender {
+        //     let _ = FlareLog.debug("StatusMediaViewV2 使用缓存媒体 - item.id: \(item.id)")
+        //     cachedView
+        // } else {
+            MediaComponentV2(
+                hideSensitive: item.sensitive && !appSettings.appearanceSettings.showSensitiveContent,
+                medias: item.images, // ✅ 修复：使用item.images而不是空数组
+                onMediaClick: { index, media in
+                    let _ = FlareLog.debug("StatusMediaViewV2 媒体点击: index=\(index), media=\(media)")
+                    PhotoBrowserManagerV2.shared.showPhotoBrowser(
+                        media: media,
+                        images: item.images, // ✅ 修复：使用item.images而不是空数组
+                        initialIndex: index
+                    )
+                },
+                sensitive: item.sensitive
+            )
+            .onAppear {
+                // 🟢 缓存渲染结果
+                // let currentView = MediaComponentV2(
+                //     hideSensitive: item.sensitive && !appSettings.appearanceSettings.showSensitiveContent,
+                //     medias: item.images,
+                //     onMediaClick: onMediaClick,
+                //     sensitive: item.sensitive
+                // )
+                // Self.mediaRenderCache[cacheKey] = AnyView(currentView)
+                // Self.lastRenderTime[cacheKey] = Date()
+                // let _ = FlareLog.debug("StatusMediaViewV2 缓存媒体渲染 - item.id: \(item.id)")
+            }
+        // }
     }
 }
 

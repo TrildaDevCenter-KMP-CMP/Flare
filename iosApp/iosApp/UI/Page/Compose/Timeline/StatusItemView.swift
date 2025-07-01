@@ -47,9 +47,9 @@ struct StatusItemView: View {
 
     var body: some View {
         // 如果应该在 timeline 中隐藏敏感内容，返回空视图
-        if shouldHideInTimeline {
-            return AnyView(EmptyView())
-        }
+        // if shouldHideInTimeline {
+        //     return AnyView(EmptyView())
+        // }
 
         return AnyView(
             VStack(spacing: 0) {

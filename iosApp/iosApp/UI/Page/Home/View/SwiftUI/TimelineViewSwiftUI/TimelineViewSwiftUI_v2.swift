@@ -27,6 +27,7 @@ import SwiftUI
      @State private var cancellables = Set<AnyCancellable>()
 
      @State private var refreshDebounceTimer: Timer?
+     @State private var topVisibleItemID: String? = "top"
 
 
     var body: some View {
@@ -35,13 +36,6 @@ import SwiftUI
                 LazyVStack(spacing: 0) {
                     ScrollToTopView(tabKey: tab.key)
                         .id("top")
-                        .background(
-                            GeometryReader { geometry in
-                                Color.clear
-                                    .preference(key: ScrollOffsetPreferenceKey.self,
-                                                value: geometry.frame(in: .global).minY)
-                            }
-                        )
 
                     // 使用简化的状态管理
                     TimelineContentViewV2(
@@ -55,6 +49,10 @@ import SwiftUI
                     )
                 }
             }
+            .scrollPosition(id: $topVisibleItemID)
+            .onChange(of: topVisibleItemID) { _, newID in
+                handleScrollOffsetChange(newID)
+            }
             .onChange(of: scrollToTopTrigger) { _, _ in
                 let _ = FlareLog.debug("TimelineView_v2 ScrollToTop trigger changed for tab: \(tab.key)")
                 guard isCurrentTab else { return }
@@ -64,7 +62,6 @@ import SwiftUI
                 }
             }
         }
-        .scrollPosition(id: $scrollPositionID)
         .refreshable {
             await handleRefresh()
         }
@@ -77,7 +74,7 @@ import SwiftUI
             // 🔥 防抖机制：取消之前的定时器，设置新的定时器
             refreshDebounceTimer?.invalidate()
             refreshDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
-                // 只有当前tab才刷新
+                // 🟢 SwiftUI View是struct，直接使用局部变量避免循环引用
                 guard isCurrentTab else { return }
 
                 Task {
@@ -85,12 +82,11 @@ import SwiftUI
                 }
             }
         }
-        .coordinateSpace(name: "scroll")
-        .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
-            handleScrollOffsetChange(offset)
-        }
         .onDisappear {
             cancellables.removeAll()
+            // 🟢 清理Timer，防止内存泄漏
+            refreshDebounceTimer?.invalidate()
+            refreshDebounceTimer = nil
         }
     }
 
@@ -122,6 +118,11 @@ import SwiftUI
                          if newState != oldState {
                             self.timelineState = newState
                             FlareLog.debug("TimelineViewSwiftUI_v2 State updated: \(newState.description)")
+
+                            // 🟢 在UI更新后异步进行批量高度预计算
+                            Task {
+                                await performBatchHeightPrecomputation(for: newState)
+                            }
                         }
                     }
                 }
@@ -154,9 +155,34 @@ import SwiftUI
         }
     }
 
-     private func handleScrollOffsetChange(_ offset: CGFloat) {
-         if !showFloatingButton {
-            showFloatingButton = true
+    private func handleScrollOffsetChange(_ newID: String?) {
+        showFloatingButton = (newID != "top")
+    }
+
+    // MARK: - 批量高度预计算
+
+    /// 在数据获取完成后、UI展示前进行批量高度预计算
+    /// - Parameter state: 新的Timeline状态
+    private func performBatchHeightPrecomputation(for state: FlareTimelineState) async {
+        // 只对loaded状态进行预计算
+        guard case let .loaded(items, _, _) = state else {
+            return
+        }
+
+        // 避免对空数据或过少数据进行预计算
+        guard items.count > 0 else {
+            return
+        }
+
+        FlareLog.debug("TimelineViewSwiftUI_v2 Starting batch height precomputation for \(items.count) items")
+
+        // 🟢 异步执行批量预计算，不阻塞UI更新
+        Task.detached(priority: .utility) {
+            await TimelineHeightPreloader.shared.batchPreloadHeights(
+                for: items,
+                screenWidth: await UIScreen.main.bounds.width
+            )
+            // 🟢 移除重复的耗时计算，TimelineHeightPreloader内部已有详细的耗时监控
         }
     }
 }

@@ -501,6 +501,7 @@ struct TimelinePerformanceTestSection: View {
 
         // 使用标准化的数据收集间隔
         dataCollectionTimer = Timer.scheduledTimer(withTimeInterval: PerformanceConfig.performanceTestDataInterval, repeats: true) { _ in
+            // 🟢 SwiftUI View是struct，直接调用方法避免循环引用
             collectPerformanceData()
         }
     }

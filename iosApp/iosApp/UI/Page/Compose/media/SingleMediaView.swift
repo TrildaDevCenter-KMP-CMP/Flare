@@ -10,7 +10,7 @@ public struct SingleMediaView: View {
     @Environment(FlareTheme.self) private var theme
 
     public var body: some View {
-        GeometryReader { geometry in
+         GeometryReader { geometry in
             ZStack {
                 if let previewUrl = viewModel.previewUrl {
                     KFImage(previewUrl)
@@ -20,7 +20,7 @@ public struct SingleMediaView: View {
                         }
                         .resizable()
                         .aspectRatio(fixedAspectRatio, contentMode: .fill)
-                        .frame(width: geometry.size.width, height: geometry.size.height)
+                          .frame(width: geometry.size.width, height: geometry.size.height)
                         .clipped()
 
                 } else {
@@ -45,5 +45,5 @@ public struct SingleMediaView: View {
                 action()
             }
         }
-    }
+     }
 }

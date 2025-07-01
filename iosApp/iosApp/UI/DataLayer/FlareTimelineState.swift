@@ -738,8 +738,8 @@ extension UiMedia {
         // 根据具体的UiMedia子类型进行转换
         if let image = self as? UiMediaImage {
             return Media(
-                url: image.url,
-                previewUrl: image.url,
+                url: image.url.removeOriginalImageSuffix(),
+                previewUrl: image.url.removeOriginalImageSuffix(),
                 type: .image,
                 altText: image.description_,
                 width: Int(image.width),
@@ -747,8 +747,8 @@ extension UiMedia {
             )
         } else if let video = self as? UiMediaVideo {
             return Media(
-                url: video.url,
-                previewUrl: video.thumbnailUrl, // ✅ 修复：使用thumbnailUrl作为previewUrl
+                url: video.url.removeOriginalImageSuffix(),
+                previewUrl: video.thumbnailUrl.removeOriginalImageSuffix(), // ✅ 修复：使用thumbnailUrl作为previewUrl
                 type: .video,
                 altText: video.description_,
                 width: Int(video.width),
@@ -756,8 +756,8 @@ extension UiMedia {
             )
         } else if let gif = self as? UiMediaGif {
             return Media(
-                url: gif.url,
-                previewUrl: gif.previewUrl,
+                url: gif.url.removeOriginalImageSuffix(),
+                previewUrl: gif.previewUrl.removeOriginalImageSuffix(),
                 type: .gif,
                 altText: gif.description_,
                 width: Int(gif.width),
@@ -765,8 +765,8 @@ extension UiMedia {
             )
         } else if let audio = self as? UiMediaAudio {
             return Media(
-                url: audio.url,
-                previewUrl: audio.previewUrl,
+                url: audio.url.removeOriginalImageSuffix(),
+                previewUrl: audio.previewUrl?.removeOriginalImageSuffix(),
                 type: .audio,
                 altText: audio.description_,
                 width: nil,
@@ -775,7 +775,7 @@ extension UiMedia {
         } else {
             // 默认处理
             return Media(
-                url: self.url,
+                url: self.url.removeOriginalImageSuffix(),
                 previewUrl: nil,
                 type: .image,
                 altText: nil,
@@ -990,6 +990,20 @@ extension UiTimeline.TopMessage {
             // 默认返回Mastodon类型
             return .mastodon(.unKnown)
         }
+    }
+}
+
+
+extension String {
+    ///https://pbs.twimg.com/media/Gua-fkdbUAAoeQb.jpg?name=orig -> https://pbs.twimg.com/media/Gua-fkdbUAAoeQb.jpg
+    func removeOriginalImageSuffix() -> String {
+        return self.replacingOccurrences(of: "?name=orig", with: "")
+    }
+}
+
+extension Optional where Wrapped == String {
+    func removeOriginalImageSuffix() -> String? {
+        return self?.removeOriginalImageSuffix()
     }
 }
 

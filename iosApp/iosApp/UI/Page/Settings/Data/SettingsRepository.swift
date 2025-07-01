@@ -27,7 +27,8 @@ class OtherSettings: Codable {
         preferredBrowser = try container.decode(PreferredBrowser.self, forKey: .preferredBrowser)
         inAppBrowserReaderView = try container.decode(Bool.self, forKey: .inAppBrowserReaderView)
         translationProvider = try container.decodeIfPresent(TranslationProvider.self, forKey: .translationProvider) ?? .google
-        sensitiveContentAnalysisEnabled = try container.decodeIfPresent(Bool.self, forKey: .sensitiveContentAnalysisEnabled) ?? false
+        sensitiveContentAnalysisEnabled = false
+        //try container.decodeIfPresent(Bool.self, forKey: .sensitiveContentAnalysisEnabled) ?? false
     }
 
     func encode(to encoder: Encoder) throws {

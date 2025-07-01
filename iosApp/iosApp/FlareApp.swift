@@ -31,6 +31,9 @@ struct FlareApp: SwiftUI.App {
         // DownloadManager初始化
         _ = DownloadManager.shared
 
+        // 🟢 初始化Timeline高度缓存管理器
+        TimelineHeightCacheManager.shared.start()
+
         // 🚀 120fps优化配置
         FrameRateOptimizer.configureForApp()
     }

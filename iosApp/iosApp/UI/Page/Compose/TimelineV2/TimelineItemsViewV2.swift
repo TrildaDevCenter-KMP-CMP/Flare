@@ -11,9 +11,28 @@ import shared
     let presenter: TimelinePresenter?
     @Binding var scrollPositionID: String?
     let onError: (FlareError) -> Void
-    
+
+    // 🟢 去重后的items，确保ForEach ID唯一性
+    private var deduplicatedItems: [(index: Int, item: TimelineItem)] {
+        var seenIDs = Set<String>()
+        var result: [(index: Int, item: TimelineItem)] = []
+
+        for (index, item) in items.enumerated() {
+            if !seenIDs.contains(item.id) {
+                seenIDs.insert(item.id)
+                result.append((index: index, item: item))
+            } else {
+                FlareLog.warning("TimelineItemsViewV2 Duplicate ID detected and removed: \(item.id)")
+            }
+        }
+
+        return result
+    }
+
     var body: some View {
-        ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+        ForEach(deduplicatedItems, id: \.item.id) { indexedItem in
+            let index = indexedItem.index
+            let item = indexedItem.item
             TimelineStatusViewV2(
                 item: item,
                 index: index,
